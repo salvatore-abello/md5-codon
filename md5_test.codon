@@ -64,17 +64,11 @@ def processMessage(msg):
 
             A, B, C, D = D, newB, B, C
 
-        init_temp[0] += A
-        init_temp[0] &= 0xFFFFFFFF
+        init_temp[0] = (init_temp[0] + A) & 0xFFFFFFFF
+        init_temp[1] = (init_temp[1] + B) & 0xFFFFFFFF
+        init_temp[2] = (init_temp[2] + C) & 0xFFFFFFFF
+        init_temp[3] = (init_temp[3] + D) & 0xFFFFFFFF
 
-        init_temp[1] += B
-        init_temp[1] &= 0xFFFFFFFF
-
-        init_temp[2] += C
-        init_temp[2] &= 0xFFFFFFFF
-
-        init_temp[3] += D
-        init_temp[3] &= 0xFFFFFFFF
 
     return ''.join(
         chr(x & 0xFF) + \
