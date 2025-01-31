@@ -1,0 +1,29 @@
+from random import getrandbits
+from python import hashlib, builtins
+
+rand = lambda: getrandbits(32)
+
+def test_brute():
+    NUM_HASHES = 1 << 32
+    MAX_STRING_LENGTH = 100
+
+    characters = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+    lchars = len(characters)
+
+    PREFIX = "bed"
+    lprefix = len(PREFIX)
+
+    end_at = 32
+    c = 0
+
+    for _ in range(NUM_HASHES):
+        if c == end_at: break
+        length = rand() % MAX_STRING_LENGTH + 1
+        random_string = ''.join(characters[rand() % lchars] for _ in range(length))
+
+       	md5_hash = hashlib.md5(builtins.str.encode(random_string)).hexdigest()
+        if md5_hash[:lprefix] == PREFIX:
+            print("FOUND", random_string, md5_hash, PREFIX)
+            c += 1
+
+test_brute()
