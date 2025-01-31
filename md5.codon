@@ -50,22 +50,20 @@ def _G(B: int, C: int, D: int) -> int:
     %G_result = add i64 %D_and_B, %not_D_and_C
     ret i64 %G_result
 
-def string_to_hex(input_string: str) -> str:
-    return ''.join([hex_table[ord(c)] for c in input_string])
+def list_to_hex(input_string: list) -> str:
+    return ''.join([hex_table[c] for c in input_string])
 
 def pad(msg):
     msglen = len(msg)
     msg_len_in_bits = (8 * msglen) & 0xFFFFFFFFFFFFFFFF
     msg.append(0x80)
 
-    padding_size = 56 - (msglen + 1) % 64
-    if padding_size < 0:
-        padding_size += 64
+    padding_size = ((55 - msglen)  & 0x3f)
 
     msg.extend([0] * padding_size)
     msg.extend([(msg_len_in_bits >> (i * 8)) & 0xFF for i in range(8)])
 
-    msglen += padding_size + 8
+    msglen += padding_size + 9
 
     return msg, msglen
 
@@ -88,8 +86,10 @@ def process_block(block, state):
             F = _I(B, C, D)
 
         G = G_values[i]
+        
         to_rotate = A + F + constants[i] + X[G]
         to_rotate = to_rotate & 0xFFFFFFFF
+        
         newB = (B + leftRotate(to_rotate, rotate_by[i])) & 0xFFFFFFFF
         A, B, C, D = D, newB, B, C
 
@@ -99,16 +99,19 @@ def process_block(block, state):
     state[3] = (state[3] + D) & 0xFFFFFFFF
 
 def md5(msg: str = '') -> str:
-    init_temp = init_MDBuffer.copy()
+    init_temp = __array__[int](4)
+
+    for x in range(4):
+        init_temp[x] = init_MDBuffer[x]
+
     result = []
 
-    
     msg, new_len = pad([ord(c) for c in msg])
 
     for offset in range(0, new_len, 64):
         process_block(msg[offset:offset+64], init_temp)
 
-    for n in init_temp:
-        result += [n & 0xFF, (n >> 8) & 0xFF, (n >> 16) & 0xFF, (n >> 24) & 0xFF]
+    for x in range(4):
+        result += [init_temp[x] & 0xFF, (init_temp[x] >> 8) & 0xFF, (init_temp[x] >> 16) & 0xFF, (init_temp[x] >> 24) & 0xFF]
     
-    return string_to_hex(''.join(chr(byte) for byte in result))
+    return list_to_hex(result)
