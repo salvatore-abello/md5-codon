@@ -36,44 +36,49 @@ def pad(msg):
     msg.extend([(msg_len_in_bits >> (i * 8)) & 0xFF for i in range(8)])
     return msg
 
-def processMessage(msg):
-    init_temp = init_MDBuffer.copy()
-    for offset in range(0, len(msg), 64):
-        A, B, C, D = init_temp
-        block = msg[offset : offset+64]
-        X = [
-            (block[4*k +3] << 24) | (block[4*k +2] << 16) | (block[4*k +1] << 8) | block[4*k]
-            for k in range(16)
-        ]
-        for i in range(64):
-            if i < 16:
-                F = (B & C) | ((~B) & D)
-            elif i < 32:
-                F = (D & B) | ((~D) & C)
-            elif i < 48:
-                F = B ^ C ^ D
-            else:
-                F = C ^ (B | ~D)
-            G = G_values[i]
-            to_rotate = A + F + constants[i] + X[G]
-            to_rotate = to_rotate & 0xFFFFFFFF
-            newB = (B + leftRotate(to_rotate, rotate_by[i])) & 0xFFFFFFFF
-            A, B, C, D = D, newB, B, C
-        init_temp[0] = (init_temp[0] + A) & 0xFFFFFFFF
-        init_temp[1] = (init_temp[1] + B) & 0xFFFFFFFF
-        init_temp[2] = (init_temp[2] + C) & 0xFFFFFFFF
-        init_temp[3] = (init_temp[3] + D) & 0xFFFFFFFF
+def process_block(block, state):
+    A, B, C, D = state
+    
+    X = [
+        (block[4*k +3] << 24) | (block[4*k +2] << 16) | (block[4*k +1] << 8) | block[4*k]
+        for k in range(16)
+    ]
 
-    result = []
-    for x in init_temp:
-        result.append(chr(x & 0xFF))
-        result.append(chr((x >> 8) & 0xFF))
-        result.append(chr((x >> 16) & 0xFF))
-        result.append(chr((x >> 24) & 0xFF))
-    return ''.join(result)
+    for i in range(64):
+        if i < 16:
+            F = (B & C) | ((~B) & D)
+        elif i < 32:
+            F = (D & B) | ((~D) & C)
+        elif i < 48:
+            F = B ^ C ^ D
+        else:
+            F = C ^ (B | ~D)
+
+        G = G_values[i]
+        to_rotate = A + F + constants[i] + X[G]
+        to_rotate = to_rotate & 0xFFFFFFFF
+        newB = (B + leftRotate(to_rotate, rotate_by[i])) & 0xFFFFFFFF
+        A, B, C, D = D, newB, B, C
+
+    state[0] = (state[0] + A) & 0xFFFFFFFF
+    state[1] = (state[1] + B) & 0xFFFFFFFF
+    state[2] = (state[2] + C) & 0xFFFFFFFF
+    state[3] = (state[3] + D) & 0xFFFFFFFF
 
 def md5(msg: str = '') -> str:
-    return string_to_hex(processMessage(pad([ord(c) for c in msg])))
+    init_temp = init_MDBuffer.copy()
+    result = []
+
+    msg = pad([ord(c) for c in msg])
+
+    for offset in range(0, len(msg), 64):
+        process_block(msg[offset:offset+64], init_temp)
+
+    for n in init_temp:
+        result += [n & 0xFF, (n >> 8) & 0xFF, (n >> 16) & 0xFF, (n >> 24) & 0xFF]
+    
+    return string_to_hex(''.join(chr(byte) for byte in result))
+
 
 def test_brute():
     from C import rand() -> int
